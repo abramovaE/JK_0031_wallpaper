@@ -3,11 +3,9 @@ package com.template
 import android.app.WallpaperManager
 
 import android.content.res.Resources
-import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -20,22 +18,7 @@ import android.os.CountDownTimer
 import android.view.*
 import android.widget.Toast
 import android.view.MotionEvent
-import androidx.recyclerview.widget.RecyclerView
 import android.view.WindowManager
-
-import android.util.DisplayMetrics
-import androidx.constraintlayout.widget.ConstraintLayout
-import android.widget.LinearLayout
-
-import android.graphics.BitmapFactory
-
-import android.graphics.Bitmap
-
-import android.content.DialogInterface
-import android.content.DialogInterface.OnShowListener
-import android.widget.ImageView
-import com.google.android.material.appbar.CollapsingToolbarLayout
-
 
 class MainActivity : AppCompatActivity(), ImageClickListener {
 
@@ -50,25 +33,18 @@ class MainActivity : AppCompatActivity(), ImageClickListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
 
         loadImages()
-        Log.d("TAG", "images: $images")
         loadNames()
 
+        val rv = binding.rv
+        val appName = resources.getString(R.string.app_name)
+        val adapter = WallpaperAdapter(images, imageNames, appName, this, this)
 
-        var rv = binding.rv
-
-        var appName = resources.getString(R.string.app_name)
-
-
-        var adapter = WallpaperAdapter(images, imageNames, appName, this, this)
-        rv.adapter = adapter
-
-        var listener = object: View.OnTouchListener{
-            override fun onTouch(view: View?, event: MotionEvent?): Boolean {
-                if(event?.actionMasked == MotionEvent.ACTION_POINTER_DOWN){
-                    var  count = event?.pointerCount
-                    Log.d("TAG", "count: $count")
-                    showToast("After 1 second you will exit the application")
-                    val timer = object: CountDownTimer(1000, 1000){
+        val listener = View.OnTouchListener { view, event ->
+            if(event?.actionMasked == MotionEvent.ACTION_POINTER_DOWN){
+                val count = event.pointerCount
+                if(count == 3) {
+                    showToast(getString(R.string.exit_1_sec))
+                    val timer = object : CountDownTimer(1000, 1000) {
                         override fun onTick(p0: Long) {}
                         override fun onFinish() {
                             finish()
@@ -76,85 +52,71 @@ class MainActivity : AppCompatActivity(), ImageClickListener {
                     }
                     timer.start()
                 }
-                return view?.onTouchEvent(event) ?: true
             }
+            view?.onTouchEvent(event) ?: false
         }
 
-        binding.rv.setOnTouchListener(listener)
+        rv.setOnTouchListener(listener)
+        rv.adapter = adapter
+
         setContentView(binding.root)
     }
 
     private fun loadImages(){
-        var files = assets.list(wallpapersFolder)
-
-        if (files != null) {
-            files.forEach {
-                var file = assets.open("$wallpapersFolder/$it")
-                var drawable = Drawable.createFromStream(file, null)
-                var imgWithName = ImgWithName(it, drawable)
-                images.add(imgWithName)
-            }
+        val files = assets.list(wallpapersFolder)
+        files?.forEach {
+            val file = assets.open("$wallpapersFolder/$it")
+            val drawable = Drawable.createFromStream(file, null)
+            val imgWithName = ImgWithName(it, drawable)
+            images.add(imgWithName)
         }
     }
 
     private fun loadNames(){
-
         val sb = StringBuilder()
-
         assets.open(namesFile).bufferedReader().forEachLine {
             sb.append(it)
         }
-        Log.d("TAG", "names: ${sb.toString()}")
-
         val typeToken = object : TypeToken<Array<ImgName>>(){}.type
-        imageNames = Gson().fromJson<Array<ImgName>>(sb.toString(), typeToken)
-
-//        Log.d("TAG", "gson: $gson")
-
-
+        imageNames = Gson().fromJson(sb.toString(), typeToken)
     }
 
-    class ImgWithName(var text: String, var img: Drawable){
+    class ImgWithName(var fileName: String, var img: Drawable){
         override fun toString(): String {
-            return text
+            return fileName
         }
     }
 
-    class ImgName(val filename: String, val imgname: String){
+    class ImgName(val fileName: String, val imgName: String)
 
-    }
-
-    fun showToast(message: String){
+    private fun showToast(message: String){
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-
     }
 
     override fun onSingleClick(img: Drawable, imageName: String){
 
 
-        var dialogBinding = DialogSelectWallpaperBinding.inflate(layoutInflater)
+        val dialogBinding = DialogSelectWallpaperBinding.inflate(layoutInflater)
         dialogBinding.imageView.setImageDrawable(img)
-        dialogBinding.textView2.setText(imageName)
+        dialogBinding.textView2.text = imageName
 
-        var dialog = AlertDialog.Builder(this).setView(dialogBinding.root).create()
+        val dialog = AlertDialog.Builder(this).setView(dialogBinding.root).create()
         dialog.window?.setLayout(400, 400)
 
-        dialogBinding.button.setOnClickListener({v->
-            var wallpaperManager = WallpaperManager.getInstance(this)
+        dialogBinding.button.setOnClickListener {
+            val wallpaperManager = WallpaperManager.getInstance(this)
+
             val displayMetrics = Resources.getSystem().displayMetrics
             val displayWidth = displayMetrics.widthPixels
             val displayHeight = displayMetrics.heightPixels
 
-            var bitmap = (img as BitmapDrawable).bitmap
-
+            val bitmap = (img as BitmapDrawable).bitmap
 
             wallpaperManager.suggestDesiredDimensions(displayWidth, displayHeight)
             wallpaperManager.setBitmap(bitmap)
-            showToast("Обои установлены")
+            showToast(getString(R.string.walpaper_set))
             dialog.dismiss()
-        })
-
-
+        }
 
         dialog.show()
 
@@ -164,22 +126,17 @@ class MainActivity : AppCompatActivity(), ImageClickListener {
         layoutParams.copyFrom(dialog.window!!.attributes)
         val displayMetrics = Resources.getSystem().displayMetrics
         val displayWidth = displayMetrics.widthPixels * 0.7
-
         layoutParams.width = displayWidth.toInt()
-//        layoutParams.height = dialogBinding.root.height
         dialog.window!!.attributes = layoutParams
-
-
-
     }
 
 
     override fun onDoubleClick(img: Drawable, imageName: String) {
-        var doubleTapDialog=  AlertDialog.Builder(this)
+        val doubleTapDialog=  AlertDialog.Builder(this)
             .setTitle(imageName)
-            .setPositiveButton("OK",
-            { dialogInterface, i ->
-                finish()})
+            .setPositiveButton("OK") { _, _ ->
+                finish()
+            }
         doubleTapDialog.show()
     }
 }

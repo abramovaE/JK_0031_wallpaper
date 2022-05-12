@@ -6,6 +6,12 @@ plugins {
 android {
     compileSdk 31
 
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            outputFileName = "${variant.versionName}.apk"
+        }
+    }
+
     defaultConfig {
         applicationId "com.template"
         minSdk 21
