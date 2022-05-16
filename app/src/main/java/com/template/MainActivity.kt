@@ -95,7 +95,6 @@ class MainActivity : AppCompatActivity(), ImageClickListener {
 
     override fun onSingleClick(img: Drawable, imageName: String){
 
-
         val dialogBinding = DialogSelectWallpaperBinding.inflate(layoutInflater)
         dialogBinding.imageView.setImageDrawable(img)
         dialogBinding.textView2.text = imageName
